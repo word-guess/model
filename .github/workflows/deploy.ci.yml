@@ -1,0 +1,51 @@
+name: Deploy
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  Push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
+        env:
+          VERSION: ${{ github.ref_name }}
+        with:
+          push: true
+          file: Dockerfile
+          build-args: |
+            MODEL_URL=${{ secrets.MODEL_URL }}
+          tags: xalvaine/guess-model:${{ github.ref_name }}
+
+  Deploy:
+    needs: Push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v0.1.4
+        env:
+          VERSION: ${{ github.ref_name }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: VERSION
+          script: |
+            set -e
+            export MODEL_VERSION=$VERSION
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd /home/github/deploy
+            git fetch origin main
+            git reset --hard origin/main
+            docker image prune -a -f --filter "until=24h"
+            docker compose up -d model --no-build --remove-orphans

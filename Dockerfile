@@ -2,7 +2,7 @@ FROM python:3.10-bullseye as fetcher
 
 WORKDIR /app
 
-COPY ./.env ./get-model.py /app/
+COPY ./get-model.py /app/
 
 ARG MODEL_URL
 ENV MODEL_URL $MODEL_URL
