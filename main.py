@@ -19,7 +19,7 @@ class Similarity(BaseModel):
 async def get_words_similarity(w1: str, w2: str):
     return {
         "similarity": model_ru.similarity(w1, w2),
-        "rank": model_ru.rank(w1, w2),
+        "rank": 0 if w1 == w2 else model_ru.rank(w1, w2),
     }
 
 
